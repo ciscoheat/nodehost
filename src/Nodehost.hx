@@ -31,16 +31,15 @@ class Nodehost implements Async
     public function checkDependencies(cb : Error -> Void) {
         // nodemon
         var err, stdout, stderr : String = @async(err => cb) ChildProcess.exec("nodemon -v", {encoding: 'utf-8'});
-
         if(!~/\d+\./.match(stdout)) {
             var error = "nodemon not found. Can be installed with:\n" +
             "npm install -g nodemon";
 
             return cb(new Error(error));
         }
+
         // Nginx
         var err, stdout, stderr = @async(err => cb) ChildProcess.exec("nginx -v", {encoding: 'utf-8'});
-
         if(!stderr.startsWith("nginx")) {
             var error = "Nginx not found. Can be installed with:\n" +
             "add-apt-repository ppa:nginx/stable && apt-get update && apt-get install -y nginx";
@@ -50,7 +49,6 @@ class Nodehost implements Async
 
         // letsencrypt
         var err, stdout, stderr = @async(err => cb) ChildProcess.exec("letsencrypt --version", {encoding: 'utf-8'});
-
         if(!stderr.startsWith("letsencrypt")) {
             var error = "letsencrypt not found. Can be installed with:\n" +
             "apt-get install -y letsencrypt";
@@ -177,9 +175,8 @@ class Nodehost implements Async
         if(!exists(appFile)) File.saveContent(appFile, app);
 
         // Add service start file
-        var serviceFile = Path.join([hostData.path, '.nodehost']);
-        if(!exists(serviceFile))
-            File.saveContent(serviceFile, startup);
+        var serviceFile = Path.join([hostData.path, hostData.host]);
+        if(!exists(serviceFile)) File.saveContent(serviceFile, startup);
 
         // Enable service
         enable(hostname, cb);
@@ -203,14 +200,16 @@ class Nodehost implements Async
 
         execute.push('/etc/init.d/nginx reload');
         execute.push('systemctl enable ' + hostData.id);
+        execute.push('systemctl start ' + hostData.id);
 
         cb(exec(execute));
     }
 
-    public function remove(hostname : String, cb : Error -> Void) {
+    public function remove(hostname : String, includingWWW : Bool, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
         exec([
+            'systemctl stop ' + hostData.id,
             'systemctl disable ' + hostData.id,
             'deluser ' + hostData.id
         ]);
@@ -220,6 +219,9 @@ class Nodehost implements Async
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-enabled', hostData.id + ".ssl.conf"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"])) catch(e : Dynamic) {};
+
+        if(includingWWW) trace(hostData.path);
+            //exec(['rm -rf ' + hostData.path]);
 
         cb(null);
     }

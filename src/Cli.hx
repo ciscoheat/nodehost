@@ -14,7 +14,7 @@ class Cli implements Async
         Sys.println("  create <hostname> [--ssl]");
         Sys.println("  enable <hostname>");
         Sys.println("  disable <hostname>");
-        Sys.println("  remove <hostname>");
+        Sys.println("  remove <hostname> [--including-www]");
         Sys.exit(1);
     }
 
@@ -46,11 +46,12 @@ class Cli implements Async
                 }
 
             case 'create' if(params.length >= 1):
-                var ssl = params.length > 1 && params[2] == '--ssl';
+                var ssl = params.length > 1 && params[1] == '--ssl';
                 Nodehost.fromConfig(appName).create(params[0], ssl, exit);
 
-            case 'remove' if(params.length == 1):
-                Nodehost.fromConfig(appName).remove(params[0], exit);
+            case 'remove' if(params.length >= 1):
+                var includingWWW = params.length > 1 && params[1] == '--including-www';
+                Nodehost.fromConfig(appName).remove(params[0], includingWWW, exit);
 
             case _:
                 help();
