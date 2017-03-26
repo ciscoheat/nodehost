@@ -1,0 +1,17 @@
+{
+  "name": "nodehost",
+  "version": "0.1.0",
+  "description": "Simple node.js hosting on AWS/EC2.",
+  "author": "ciscoheat",
+  "license": "MIT",
+  "scripts": {
+    "build": "haxe nodehost.hxml && sed -i \"1i #!/usr/bin/env node\" bin/nodehost.js"
+  },
+  "bin": {
+    "nodehost": "./bin/nodehost.js"
+  },
+  "dependencies": {
+    "commander": "^2.9.0",
+    "glob": "^7.1.1"
+  }
+}

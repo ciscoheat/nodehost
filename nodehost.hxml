@@ -1,0 +1,7 @@
+-lib hxnodejs
+-lib dataclass
+-lib asynctools
+
+-cp src
+-main Cli
+-js bin/nodehost.js
