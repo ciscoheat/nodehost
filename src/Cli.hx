@@ -1,6 +1,7 @@
 import js.node.ChildProcess;
 
 using StringTools;
+using Lambda;
 
 class Cli implements Async
 {
@@ -11,7 +12,7 @@ class Cli implements Async
         Sys.println("Nodehost available commands:");
         Sys.println("  setup [directory] [username] [startport]");
         Sys.println("  list");
-        Sys.println("  create <hostname> [--no-ssl]");
+        Sys.println("  create <hostname> [--no-ssl] [--separate-user]");
         Sys.println("  enable <hostname>");
         Sys.println("  disable <hostname>");
         Sys.println("  remove <hostname> [--including-dir]");
@@ -46,8 +47,10 @@ class Cli implements Async
                 }
 
             case 'create' if(params.length >= 1):
-                var ssl = !(params.length > 1 && params[1] == '--no-ssl');
-                Nodehost.fromConfig(appName).create(params[0], ssl, exit);
+                var args = params.slice(1);
+                var ssl = !args.has('--no-ssl');
+                var separateUser = args.has('--separate-user');
+                Nodehost.fromConfig(appName).create(params[0], ssl, separateUser, exit);
 
             case 'remove' if(params.length >= 1):
                 var includingData = params.length > 1 && params[1] == '--including-dir';

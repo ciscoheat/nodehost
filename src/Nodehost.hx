@@ -91,7 +91,7 @@ class Nodehost implements Async
 
     public function list(cb : Error -> Array<HostData> -> Void) {
         try {
-            var enabled = Glob.sync('/etc/nginx/sites-enabled/${config.app}+([0-9]).conf').map(function(file) 
+            var enabled = Glob.sync('/etc/nginx/sites-enabled/${config.app}+([0-9]).conf').map(function(file)
                 return new Path(file).file
             );
 
@@ -99,7 +99,7 @@ class Nodehost implements Async
                 var filename = new Path(file);
                 var content = File.getContent(file);
                 var id = filename.file;
-                
+
                 var portReg = ~/\d+$/;
                 if(!portReg.match(id)) {
                     throw new Error("Invalid configuration file: " + id + "." + filename.ext);
@@ -118,7 +118,6 @@ class Nodehost implements Async
                     host: host,
                     port: port,
                     enabled: enabled.has(id),
-                    user: id
                 });
             });
             cb(null, hosts);
@@ -127,14 +126,14 @@ class Nodehost implements Async
         }
     }
 
-    public function create(hostname : String, addSSL : Bool, cb : Error -> Void) {
+    public function create(hostname : String, addSSL : Bool, separateUser : Bool, cb : Error -> Void) {
         var err, hosts = @async(err => cb) list();
         var hostExists = hosts.find(function(host) return host.host == hostname);
 
         if(hostExists != null)
             return cb(new Error('Host "$hostname" already exists (${hostExists.id})'));
 
-        var nextPort = hosts.fold(function(host, port : Int) 
+        var nextPort = hosts.fold(function(host, port : Int)
             return Std.int(Math.max(host.port, port)), config.startport-1) + 1;
 
         var id = config.app + nextPort;
@@ -145,11 +144,14 @@ class Nodehost implements Async
             host: hostname,
             port: nextPort,
             enabled: false,
-            user: id
         });
 
+        var user = separateUser ? id : config.username;
+
+        Reflect.setField(hostData, 'USER', user);
+
         // Render templates
-        function template(name : String) 
+        function template(name : String)
             return Path.join([js.Node.__dirname, 'templates', name]);
 
         // Add special LOCATION var, for nginx configuration
@@ -163,24 +165,28 @@ class Nodehost implements Async
         var app = render(template('app.js'), hostData);
 
         File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);
-        
+
         if(addSSL) http += https;
         File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), http);
 
-        var error = exec([
-            'adduser --no-create-home --system ${hostData.id}',
-            'mkdir -p ' + Path.join([hostData.path, 'www', 'public']),
-            'chown ${hostData.id}:${config.app} ${hostData.path} -R'
-        ]);
-        if(error != null) return cb(error);
+        // Create home directory
+        exec(['mkdir -p ' + Path.join([hostData.path, 'www', 'public'])]);
+
+        // Create extra user
+        if(separateUser) exec(['adduser --no-create-home --system ${hostData.id}']);
 
         // Add default app.js
         var appFile = Path.join([hostData.path, 'www', 'app.js']);
-        if(!exists(appFile)) File.saveContent(appFile, app);
+        if(!exists(appFile)) {
+            File.saveContent(appFile, app);
+        }
 
         // Add service start file
         var serviceFile = Path.join([hostData.path, hostData.host]);
         if(!exists(serviceFile)) File.saveContent(serviceFile, startup);
+
+        // Set owner to service user
+        exec(['chown $user:${config.app} ${hostData.path} -R']);
 
         // Enable service
         enable(hostname, cb);
@@ -211,7 +217,7 @@ class Nodehost implements Async
             return cb(new Error('$hostname is not enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.conf']);
-        
+
         var execute = [
             'rm $src',
             '/etc/init.d/nginx reload',
@@ -226,7 +232,7 @@ class Nodehost implements Async
         var err = @async disable(hostname);
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        exec(['deluser ' + hostData.id]);
+        exec(['getent passwd ${hostData.id} > /dev/null && deluser ${hostData.id}']);
 
         try sys.FileSystem.deleteFile(Path.join(['/etc/systemd/system', hostData.id + ".service"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
@@ -281,7 +287,7 @@ class Nodehost implements Async
             catch(e : js.Error) errors.push(e);
         }
 
-        return errors.length > 0 
+        return errors.length > 0
             ? new Error(errors.map(function(err) return err.message).join("\n"))
             : null;
     }
@@ -301,6 +307,5 @@ class Nodehost implements Async
     @validate(_.length > 1) public var path : String;
     @validate(~/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/) public var host : String;
     @validate(_ >= 1024) public var port : Int;
-    @validate(~/\w+/) public var user : String;
     public var enabled : Bool;
 }
