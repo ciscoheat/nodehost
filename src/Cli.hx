@@ -1,4 +1,5 @@
 import js.node.ChildProcess;
+import Nodehost.Protocols;
 
 using StringTools;
 using Lambda;
@@ -12,7 +13,7 @@ class Cli implements Async
         Sys.println("Nodehost available commands:");
         Sys.println("  setup [directory] [username] [startport]");
         Sys.println("  list");
-        Sys.println("  create <hostname> [--no-ssl] [--separate-user]");
+        Sys.println("  create <hostname> [--no-https] [--no-http] [--separate-user]");
         Sys.println("  enable <hostname>");
         Sys.println("  disable <hostname>");
         Sys.println("  remove <hostname> [--including-dir]");
@@ -48,13 +49,16 @@ class Cli implements Async
 
             case 'create' if(params.length >= 1):
                 var args = params.slice(1);
-                var ssl = !args.has('--no-ssl');
                 var separateUser = args.has('--separate-user');
-                Nodehost.fromConfig(appName).create(params[0], ssl, separateUser, exit);
+                var protocols = new haxe.EnumFlags<Nodehost.Protocols>();
+                if(!args.has('--no-https')) protocols.set(Https);
+                if(!args.has('--no-http')) protocols.set(Http);
+
+                Nodehost.fromConfig(appName).create(params[0], protocols, separateUser, exit);
 
             case 'remove' if(params.length >= 1):
-                var includingData = params.length > 1 && params[1] == '--including-dir';
-                Nodehost.fromConfig(appName).remove(params[0], includingData, exit);
+                var includingDir = params.length > 1 && params[1] == '--including-dir';
+                Nodehost.fromConfig(appName).remove(params[0], includingDir, exit);
 
             case 'enable' if(params.length == 1):
                 Nodehost.fromConfig(appName).enable(params[0], exit);

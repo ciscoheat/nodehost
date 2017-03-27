@@ -11,6 +11,12 @@ using StringTools;
 using Lambda;
 using dataclass.JsonConverter;
 
+enum Protocols
+{
+    Http;
+    Https;
+}
+
 class Nodehost implements Async
 {
     var config : AppData;
@@ -114,7 +120,7 @@ class Nodehost implements Async
 
                 return new HostData({
                     id: id,
-                    path: Path.join([config.basepath, id]),
+                    path: Path.join([config.basepath, host]),
                     host: host,
                     port: port,
                     enabled: enabled.has(id),
@@ -126,7 +132,7 @@ class Nodehost implements Async
         }
     }
 
-    public function create(hostname : String, addSSL : Bool, separateUser : Bool, cb : Error -> Void) {
+    public function create(hostname : String, protocols : haxe.EnumFlags<Protocols>, separateUser : Bool, cb : Error -> Void) {
         var err, hosts = @async(err => cb) list();
         var hostExists = hosts.find(function(host) return host.host == hostname);
 
@@ -159,15 +165,15 @@ class Nodehost implements Async
         Reflect.setField(hostData, 'LOCATION', location);
 
         var systemd = render(template('systemd.conf'), hostData);
-        var http = render(template('nginx.http.conf'), hostData);
-        var https = render(template('nginx.https.conf'), hostData);
+        var http = protocols.has(Http) ? render(template('nginx.http.conf'), hostData) : '';
+        var https = protocols.has(Https) ? render(template('nginx.https.conf'), hostData) : '';
         var startup = render(template('startup.sh'), hostData);
         var app = render(template('app.js'), hostData);
 
         File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);
 
-        if(addSSL) http += https;
-        File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), http);
+        var header = '# ${hostData.host} on port ${hostData.port}\n';
+        File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), header + [http, https].join('\n'));
 
         // Create home directory
         exec(['mkdir -p ' + Path.join([hostData.path, 'www', 'public'])]);
@@ -237,8 +243,7 @@ class Nodehost implements Async
         try sys.FileSystem.deleteFile(Path.join(['/etc/systemd/system', hostData.id + ".service"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
 
-        if(includingDir)
-            exec(['rm -rf ' + hostData.path]);
+        if(includingDir) exec(['rm -rf ' + hostData.path]);
 
         cb(null);
     }
