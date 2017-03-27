@@ -223,7 +223,7 @@ class Nodehost implements Async
     }
 
     public function remove(hostname : String, includingDir : Bool, cb : Error -> Void) {
-        var err = @async(err => cb) disable(hostname);
+        var err = @async disable(hostname);
         var err, hostData = @async(err => cb) getHost(hostname);
 
         exec(['deluser ' + hostData.id]);
