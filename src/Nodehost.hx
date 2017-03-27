@@ -260,6 +260,35 @@ class Nodehost implements Async
 
     ///////////////////////////////////////////////////////////////////////////
 
+    public function restart(hostname : String, cb : Error -> Void) {
+        var err, hostData = @async(err => cb) getHost(hostname);
+
+        if(!hostData.enabled)
+            return enable(hostname, cb);
+
+        var execute = [
+            '/etc/init.d/nginx reload',
+            'systemctl restart ' + hostData.id
+        ];
+
+        cb(exec(execute));
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    public function status(hostname : String, params : Array<String>, cb : Error -> Void) {
+        var err, hostData = @async(err => cb) getHost(hostname);
+
+        var execute = [
+            //'systemctl ${params.join(" ")} status ' + hostData.id
+            'systemctl status ' + hostData.id
+        ];
+
+        cb(exec(execute));
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+
     public function remove(hostname : String, includingDir : Bool, cb : Error -> Void) {
         if(!ask('Remove "$hostname"?')) {
             return cb(new Error("User interrupt."));

@@ -29,7 +29,9 @@ After installation:
 ```bash
 nodehost help
 nodehost list
+nodehost status example.com
 sudo nodehost create example.com
+sudo nodehost restart example.com
 sudo nodehost disable example.com
 sudo nodehost enable example.com
 sudo nodehost remove example.com

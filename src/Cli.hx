@@ -16,6 +16,8 @@ class Cli implements Async
         Sys.println("  create <hostname> [--no-https] [--no-http] [--separate-user]");
         Sys.println("  enable <hostname>");
         Sys.println("  disable <hostname>");
+        Sys.println("  restart <hostname>");
+        Sys.println("  status <hostname>");
         Sys.println("  remove <hostname> [--including-dir]");
         Sys.exit(1);
     }
@@ -76,6 +78,12 @@ class Cli implements Async
 
             case 'disable' if(params.length == 1):
                 Nodehost.fromConfig(appName).disable(params[0], exit);
+
+            case 'restart' if(params.length == 1):
+                Nodehost.fromConfig(appName).restart(params[0], exit);
+
+            case 'status' if(params.length >= 1):
+                Nodehost.fromConfig(appName).status(params[0], params.slice(1), exit);
 
             case _:
                 help();
