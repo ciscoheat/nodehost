@@ -30,12 +30,16 @@ class Nodehost implements Async
         return new Nodehost(AppData.fromJson(haxe.Json.parse(File.getContent(configFile(app)))));
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+
     public function new(config : AppData) {
         if(config.username == "root") throw "Nodehost cannot be used as root.";
         if(exec(['id -u ${config.username} > /dev/null']) != null) throw 'User ${config.username} doesn\'t exist.';
 
         this.config = config;
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public function checkDependencies(forceInstall : Bool, cb : Error -> Void) {
         // nodemon
@@ -71,6 +75,8 @@ class Nodehost implements Async
         cb(null);
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+
     public function setup(forceInstall : Bool, cb : Error -> Void) {
         if(!ask('Setup ${config.app} for user "${config.username}" in directory "${config.basepath}"?')) {
             return cb(new Error("User interrupt."));
@@ -100,6 +106,8 @@ class Nodehost implements Async
 
         cb(null);
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public function list(cb : Error -> Array<HostData> -> Void) {
         try {
@@ -137,6 +145,8 @@ class Nodehost implements Async
             cb(err, null);
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public function create(hostname : String, protocols : haxe.EnumFlags<Protocols>, separateUser : Bool, cb : Error -> Void) {
         var err, hosts = @async(err => cb) list();
@@ -191,11 +201,15 @@ class Nodehost implements Async
         var appFile = Path.join([hostData.path, 'www', 'app.js']);
         if(!exists(appFile)) {
             File.saveContent(appFile, app);
+            exec(['chmod 770 $appFile']);
         }
 
         // Add service start file
         var serviceFile = Path.join([hostData.path, hostData.host]);
-        if(!exists(serviceFile)) File.saveContent(serviceFile, startup);
+        if(!exists(serviceFile)) {
+            File.saveContent(serviceFile, startup);
+            exec(['chmod 770 $serviceFile']);
+        }
 
         // Set owner to service user
         exec(['chown $user:${config.app} ${hostData.path} -R']);
@@ -203,6 +217,8 @@ class Nodehost implements Async
         // Enable service
         enable(hostname, cb);
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public function enable(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
@@ -222,6 +238,8 @@ class Nodehost implements Async
         cb(exec(execute));
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+
     public function disable(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
@@ -239,6 +257,8 @@ class Nodehost implements Async
 
         cb(exec(execute));
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public function remove(hostname : String, includingDir : Bool, cb : Error -> Void) {
         if(!ask('Remove "$hostname"?')) {
@@ -258,6 +278,8 @@ class Nodehost implements Async
         cb(null);
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+
     function getHost(hostname : String, cb : Error -> HostData -> Void) : Void {
         var err, hosts = @async(err, null => cb) list();
         var hostData = hosts.find(function(host) return host.host == hostname);
@@ -265,8 +287,6 @@ class Nodehost implements Async
 
         cb(error, hostData);
     }
-
-    ///////////////////////////////////////////////////////////////////////////
 
     static function render(file : String, vars : Dynamic) {
         var content = File.getContent(file);
