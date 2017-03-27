@@ -57,9 +57,9 @@ Default behavior for the service execution file is to start nodemon for an `app.
 
 Other useful locations for nodehost itself:
 
-`/etc/nginx/nodehost.conf.json` - configuration file, created during setup
-`/etc/nginx/sites-available/nodehost*.conf` - nginx files for each host
-`/etc/systemd/system/nodehost*.service` - systemd files for each host
+- `/etc/nginx/nodehost.conf.json` - configuration file, created during setup
+- `/etc/nginx/sites-available/nodehost*.conf` - nginx files for each host
+- `/etc/systemd/system/nodehost*.service` - systemd files for each host
 
 ## SSL/TLS/HTTPS
 
