@@ -24,8 +24,8 @@ npm install && npm run build
 npm link
 
 # "username" is the default user the services should run under, for example "ubuntu".
-# That user will also have write rights to "/app/hosting/dir"
-nodehost setup /app/hosting/dir username --install-dependencies
+# That user will also have write rights to "/hosting/dir"
+nodehost setup /hosting/dir username --install-dependencies
 ```
 
 ## Building
@@ -48,10 +48,10 @@ nodehost status example.com
 
 After creating a host, `example.com` will have some points of interest:
 
-- Base dir: `/app/hosting/dir/example.com`
-- Service execution file: `/app/hosting/dir/example.com/example.com`
-- www dir: `/app/hosting/dir/example.com/www`
-- static files dir: `/app/hosting/dir/example.com/www/public`
+- Base dir: `/hosting/dir/example.com`
+- Service execution file: `/hosting/dir/example.com/example.com`
+- www dir: `/hosting/dir/example.com/www`
+- static files dir: `/hosting/dir/example.com/www/public`
 
 Default behavior for the service execution file is to start nodemon for an `app.js` file in the `www` dir. Change the content as suited, but don't change the filename, since systemd depends on it.
 
