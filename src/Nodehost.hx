@@ -127,7 +127,7 @@ class Nodehost implements Async
         }
     }
 
-    public function create(hostname : String, ssl : Bool, cb : Error -> Void) {
+    public function create(hostname : String, addSSL : Bool, cb : Error -> Void) {
         var err, hosts = @async(err => cb) list();
         var hostExists = hosts.find(function(host) return host.host == hostname);
 
@@ -155,13 +155,13 @@ class Nodehost implements Async
         var systemd = render(template('systemd.conf'), hostData);
         var location = render(template('nginx.location.conf'), hostData);
         var http = render(template('nginx.http.conf'), {LOCATION: location});
-        var https = render(template('nginx.https.conf'), {LOCATION: location, host: hostData.host});
+        var https = render(template('nginx.https.conf'), {LOCATION: location, host: hostData.host, path: hostData.path});
         var startup = render(template('startup.sh'), hostData);
         var app = render(template('app.js'), hostData);
 
         File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);
         File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), http);
-        if(ssl) File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"]), https);
+        if(addSSL) File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"]), https);
 
         var error = exec([
             'adduser --no-create-home --system ${hostData.id}',
@@ -205,23 +205,39 @@ class Nodehost implements Async
         cb(exec(execute));
     }
 
-    public function remove(hostname : String, includingWWW : Bool, cb : Error -> Void) {
+    public function disable(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        exec([
-            'systemctl stop ' + hostData.id,
-            'systemctl disable ' + hostData.id,
-            'deluser ' + hostData.id
-        ]);
+        if(!hostData.enabled)
+            return cb(new Error('$hostname is not enabled.'));
+
+        var src = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.conf']);
+        var srcSsl = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.ssl.conf']);
+
+        var execute = ['rm $src'];
+
+        if(exists(srcSsl))
+            execute.push('rm $srcSsl');
+
+        execute.push('/etc/init.d/nginx reload');
+        execute.push('systemctl disable ' + hostData.id);
+        execute.push('systemctl stop ' + hostData.id);
+
+        cb(exec(execute));
+    }
+
+    public function remove(hostname : String, includingDir : Bool, cb : Error -> Void) {
+        var err = @async(err => cb) disable(hostname);
+        var err, hostData = @async(err => cb) getHost(hostname);
+
+        exec(['deluser ' + hostData.id]);
 
         try sys.FileSystem.deleteFile(Path.join(['/etc/systemd/system', hostData.id + ".service"])) catch(e : Dynamic) {};
-        try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-enabled', hostData.id + ".conf"])) catch(e : Dynamic) {};
-        try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-enabled', hostData.id + ".ssl.conf"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"])) catch(e : Dynamic) {};
 
-        if(includingWWW) trace(hostData.path);
-            //exec(['rm -rf ' + hostData.path]);
+        if(includingDir)
+            exec(['rm -rf ' + hostData.path]);
 
         cb(null);
     }

@@ -11,10 +11,10 @@ class Cli implements Async
         Sys.println("Nodehost available commands:");
         Sys.println("  setup [directory] [username] [startport]");
         Sys.println("  list");
-        Sys.println("  create <hostname> [--ssl]");
+        Sys.println("  create <hostname> [--no-ssl]");
         Sys.println("  enable <hostname>");
         Sys.println("  disable <hostname>");
-        Sys.println("  remove <hostname> [--including-www]");
+        Sys.println("  remove <hostname> [--including-dir]");
         Sys.exit(1);
     }
 
@@ -46,12 +46,18 @@ class Cli implements Async
                 }
 
             case 'create' if(params.length >= 1):
-                var ssl = params.length > 1 && params[1] == '--ssl';
+                var ssl = !(params.length > 1 && params[1] == '--no-ssl');
                 Nodehost.fromConfig(appName).create(params[0], ssl, exit);
 
             case 'remove' if(params.length >= 1):
-                var includingWWW = params.length > 1 && params[1] == '--including-www';
-                Nodehost.fromConfig(appName).remove(params[0], includingWWW, exit);
+                var includingData = params.length > 1 && params[1] == '--including-dir';
+                Nodehost.fromConfig(appName).remove(params[0], includingData, exit);
+
+            case 'enable' if(params.length == 1):
+                Nodehost.fromConfig(appName).enable(params[0], exit);
+
+            case 'disable' if(params.length == 1):
+                Nodehost.fromConfig(appName).disable(params[0], exit);
 
             case _:
                 help();
