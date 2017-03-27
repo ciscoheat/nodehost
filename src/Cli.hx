@@ -11,7 +11,7 @@ class Cli implements Async
 
     static function help() {
         Sys.println("Nodehost available commands:");
-        Sys.println("  setup [directory] [username] [startport]");
+        Sys.println("  setup <directory> <username> [startport] [--install-dependencies]");
         Sys.println("  list");
         Sys.println("  create <hostname> [--no-https] [--no-http] [--separate-user]");
         Sys.println("  enable <hostname>");
@@ -21,15 +21,26 @@ class Cli implements Async
     }
 
     static function main() {
+        try start()
+        catch(e : js.Error) exit(e)
+        catch(e : String) exit(new js.Error(e));
+    }
+
+    static function start() {
         var args = Sys.args();
         if(args.length == 0) help();
 
         var params = args.slice(1);
 
         switch args[0].trim() {
-            case 'setup' if(params.length > 0):
-                var basepath = if(params.length > 0) params[0] else Sys.getCwd();
-                var username = if(params.length > 1) params[1] else ChildProcess.execSync("whoami", {encoding: 'utf-8'}).trim();
+            case 'setup' if(params.length >= 2):
+                var installDeps = params.has('--install-dependencies');
+                params.remove("--install-dependencies");
+
+                if(params.length < 2) help();
+
+                var basepath = params[0];
+                var username = params[1];
                 var startport = if(params.length > 2) Std.parseInt(params[2]) else startPort;
 
                 var appData = new Nodehost.AppData({
@@ -39,7 +50,7 @@ class Cli implements Async
                     startport: startport
                 });
 
-                new Nodehost(appData).setup(exit);
+                new Nodehost(appData).setup(installDeps, exit);
 
             case 'list' if(params.length == 0):
                 var err, hosts = @async(err => exit) Nodehost.fromConfig(appName).list();

@@ -30,50 +30,56 @@ class Nodehost implements Async
         return new Nodehost(AppData.fromJson(haxe.Json.parse(File.getContent(configFile(app)))));
     }
 
-    public function new(config) {
+    public function new(config : AppData) {
+        if(config.username == "root") throw "Nodehost cannot be used as root.";
+        if(exec(['id -u ${config.username} > /dev/null']) != null) throw 'User ${config.username} doesn\'t exist.';
+
         this.config = config;
     }
 
-    public function checkDependencies(cb : Error -> Void) {
+    public function checkDependencies(forceInstall : Bool, cb : Error -> Void) {
         // nodemon
-        var err, stdout, stderr : String = @async(err => cb) ChildProcess.exec("nodemon -v", {encoding: 'utf-8'});
-        if(!~/\d+\./.match(stdout)) {
-            var error = "nodemon not found. Can be installed with:\n" +
-            "npm install -g nodemon";
+        var err, stdout, stderr : String = @async ChildProcess.exec("nodemon -v", {encoding: 'utf-8'});
+        if(err != null) {
+            var command = "sudo npm install -g nodemon";
+            var error = "nodemon not found. Can be installed with:\n" + command;
 
-            return cb(new Error(error));
+            var err = if(forceInstall) exec([command]) else new Error(error);
+            if(err != null) return cb(err);
         }
 
         // Nginx
-        var err, stdout, stderr = @async(err => cb) ChildProcess.exec("nginx -v", {encoding: 'utf-8'});
-        if(!stderr.startsWith("nginx")) {
-            var error = "Nginx not found. Can be installed with:\n" +
-            "add-apt-repository ppa:nginx/stable && apt-get update && apt-get install -y nginx";
+        var err, stdout, stderr : String = @async ChildProcess.exec("nginx -v", {encoding: 'utf-8'});
+        if(err != null) {
+            var command = "sudo add-apt-repository ppa:nginx/stable && sudo apt-get update && sudo apt-get install -y nginx";
+            var error = "Nginx not found. Can be installed with:\n" + command;
 
-            return cb(new Error(error));
+            var err = if(forceInstall) exec([command]) else new Error(error);
+            if(err != null) return cb(err);
         }
 
         // letsencrypt
-        var err, stdout, stderr = @async(err => cb) ChildProcess.exec("letsencrypt --version", {encoding: 'utf-8'});
-        if(!stderr.startsWith("letsencrypt")) {
-            var error = "letsencrypt not found. Can be installed with:\n" +
-            "apt-get install -y letsencrypt";
+        var err, stdout, stderr : String = @async ChildProcess.exec("letsencrypt --version", {encoding: 'utf-8'});
+        if(err != null) {
+            var command = "sudo apt-get install -y letsencrypt";
+            var error = "letsencrypt not found. Can be installed with:\n" + command;
 
-            return cb(new Error(error));
+            var err = if(forceInstall) exec([command]) else new Error(error);
+            if(err != null) return cb(err);
         }
 
         cb(null);
     }
 
-    public function setup(cb : Error -> Void) {
-        var err = @async(err => cb) checkDependencies();
+    public function setup(forceInstall : Bool, cb : Error -> Void) {
+        if(!ask('Setup ${config.app} for user "${config.username}" in directory "${config.basepath}"?')) {
+            return cb(new Error("User interrupt."));
+        }
+
+        var err = @async(err => cb) checkDependencies(forceInstall);
 
         if(exists(configFile(config.app))) {
             return cb(new Error('Configuration file ${configFile(config.app)} already exists.'));
-        }
-
-        if(!ask('Setup ${config.app} for user "${config.username}" in directory "${config.basepath}"?')) {
-            return cb(new Error("User interrupt."));
         }
 
         // Setup
@@ -235,6 +241,10 @@ class Nodehost implements Async
     }
 
     public function remove(hostname : String, includingDir : Bool, cb : Error -> Void) {
+        if(!ask('Remove "$hostname"?')) {
+            return cb(new Error("User interrupt."));
+        }
+        
         var err = @async disable(hostname);
         var err, hostData = @async(err => cb) getHost(hostname);
 
@@ -288,7 +298,7 @@ class Nodehost implements Async
     static function exec(commands : Array<String>) : Error {
         var errors = [];
         for(cmd in commands) {
-            try ChildProcess.execSync(cmd)
+            try ChildProcess.execSync(cmd, {stdio: 'inherit'})
             catch(e : js.Error) errors.push(e);
         }
 
