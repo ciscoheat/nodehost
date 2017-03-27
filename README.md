@@ -6,7 +6,7 @@ Quick Node.js hosting on ubuntu:
 - Service based (systemd)
 - Can be set to separate user per service
 - Restarts automatically using nodemon
-- SSL support with letsencrypt
+- SSL support with letsencrypt/certbot
 - *Alpha version*
 
 ## Install
@@ -63,4 +63,4 @@ Other useful locations for nodehost itself:
 
 ## SSL/TLS/HTTPS
 
-`/etc/nginx/sites-available/nodehost*.conf` contains details for generating either a self-signed certificate, or a real one with `letsencrypt`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
+`/etc/nginx/sites-available/nodehost*.conf` contains details for generating either a self-signed certificate, or a real one with `certbot`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
