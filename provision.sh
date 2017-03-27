@@ -20,6 +20,10 @@ apt-get update >/dev/null 2>&1
 # Used in many dependencies:
 apt-get install python-software-properties curl git -y
 
+echo "=== Renaming host..."
+sed -i "s/`cat /etc/hostname`/nodehost/g" /etc/hosts
+echo nodehost > /etc/hostname
+systemctl restart systemd-logind.service
 
 echo "=== Provision script finished!"
 echo "Start with 'vagrant reload && vagrant ssh'."

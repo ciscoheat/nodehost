@@ -50,7 +50,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # config.vm.synced_folder "./www", "/var/www"
 
   config.vm.provider :virtualbox do |v|
-    
+    v.name = "nodehost"
     v.customize ["modifyvm", :id, "--memory", 512]
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"] # Use NAT DNS host resolver
     # === Allow Node.js to create symlinks for packages:
