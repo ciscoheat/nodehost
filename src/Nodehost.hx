@@ -118,7 +118,7 @@ class Nodehost implements Async
                     host: host,
                     port: port,
                     enabled: enabled.has(id),
-                    user: config.username
+                    user: id
                 });
             });
             cb(null, hosts);
@@ -145,7 +145,7 @@ class Nodehost implements Async
             host: hostname,
             port: nextPort,
             enabled: false,
-            user: config.username
+            user: id
         });
 
         // Render templates
