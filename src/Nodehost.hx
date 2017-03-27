@@ -183,7 +183,7 @@ class Nodehost implements Async
         var systemd = render(template('systemd.conf'), hostData);
         var http = protocols.has(Http) ? render(template('nginx.http.conf'), hostData) : '';
         var https = protocols.has(Https) ? render(template('nginx.https.conf'), hostData) : '';
-        var startup = render(template('startup.sh'), hostData);
+        var startup = ~/\r/g.replace(render(template('startup.sh'), hostData), ''); // Remove carriage returns from shell script
         var app = render(template('app.js'), hostData);
 
         File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);

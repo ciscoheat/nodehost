@@ -14,32 +14,53 @@ Quick Node.js hosting on ubuntu:
 As root, in the repo dir:
 
 ```bash
-# Install Node.js
+# Install Node.js if needed
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - && sudo apt-get install -y nodejs
 
-npm install && npm link
+# First time build
+npm install && npm run build
 
-# "username" is the default user the services should run under
-# it will also have write rights to /app/hosting/dir
+# For shell usage
+npm link
+
+# "username" is the default user the services should run under, for example "ubuntu".
+# That user will also have write rights to "/app/hosting/dir"
 nodehost setup /app/hosting/dir username --install-dependencies
 ```
 
-After installation:
+## Building
 
 ```bash
-nodehost help
-nodehost list
-nodehost status example.com
-sudo nodehost create example.com
-sudo nodehost restart example.com
-sudo nodehost disable example.com
-sudo nodehost enable example.com
-sudo nodehost remove example.com
+npm run build
 ```
 
-`example.com` will have the following paths: 
+## Running
 
-- Location: `/app/hosting/dir/example.com`
+```
+nodehost help
+nodehost list
+sudo nodehost create example.com
+sudo nodehost <restart/disable/enable/remove> example.com
+nodehost status example.com
+```
+
+## Useful files and dirs
+
+After creating a host, `example.com` will have some points of interest:
+
+- Base dir: `/app/hosting/dir/example.com`
 - Service execution file: `/app/hosting/dir/example.com/example.com`
 - www dir: `/app/hosting/dir/example.com/www`
 - static files dir: `/app/hosting/dir/example.com/www/public`
+
+Default behavior for the service execution file is to start nodemon for an `app.js` file in the `www` dir. Change the content as suited, but don't change the filename, since systemd depends on it.
+
+Other useful locations for nodehost itself:
+
+`/etc/nginx/nodehost.conf.json` - configuration file, created during setup
+`/etc/nginx/sites-available/nodehost*.conf` - nginx files for each host
+`/etc/systemd/system/nodehost*.service` - systemd files for each host
+
+## SSL/TLS/HTTPS
+
+`/etc/nginx/sites-available/nodehost*.conf` contains details for generating either a self-signed certificate, or a real one with `letsencrypt`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
