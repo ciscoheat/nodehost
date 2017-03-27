@@ -152,16 +152,20 @@ class Nodehost implements Async
         function template(name : String) 
             return Path.join([js.Node.__dirname, 'templates', name]);
 
-        var systemd = render(template('systemd.conf'), hostData);
+        // Add special LOCATION var, for nginx configuration
         var location = render(template('nginx.location.conf'), hostData);
-        var http = render(template('nginx.http.conf'), {LOCATION: location});
-        var https = render(template('nginx.https.conf'), {LOCATION: location, host: hostData.host, path: hostData.path});
+        Reflect.setField(hostData, 'LOCATION', location);
+
+        var systemd = render(template('systemd.conf'), hostData);
+        var http = render(template('nginx.http.conf'), hostData);
+        var https = render(template('nginx.https.conf'), hostData);
         var startup = render(template('startup.sh'), hostData);
         var app = render(template('app.js'), hostData);
 
         File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);
+        
+        if(addSSL) http += https;
         File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), http);
-        if(addSSL) File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"]), https);
 
         var error = exec([
             'adduser --no-create-home --system ${hostData.id}',
@@ -189,18 +193,13 @@ class Nodehost implements Async
             return cb(new Error('$hostname is already enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-available', hostData.id + '.conf']);
-        var srcSsl = Path.join(['/etc/nginx/sites-available', hostData.id + '.ssl.conf']);
 
         var execute = [
-            'ln -s $src ' + src.replace('/sites-available/', '/sites-enabled/')
+            'ln -s $src ' + src.replace('/sites-available/', '/sites-enabled/'),
+            '/etc/init.d/nginx reload',
+            'systemctl enable ' + hostData.id,
+            'systemctl start ' + hostData.id
         ];
-
-        if(exists(srcSsl))
-            execute.push('ln -s $srcSsl ' + srcSsl.replace('/sites-available/', '/sites-enabled/'));
-
-        execute.push('/etc/init.d/nginx reload');
-        execute.push('systemctl enable ' + hostData.id);
-        execute.push('systemctl start ' + hostData.id);
 
         cb(exec(execute));
     }
@@ -212,16 +211,13 @@ class Nodehost implements Async
             return cb(new Error('$hostname is not enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.conf']);
-        var srcSsl = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.ssl.conf']);
-
-        var execute = ['rm $src'];
-
-        if(exists(srcSsl))
-            execute.push('rm $srcSsl');
-
-        execute.push('/etc/init.d/nginx reload');
-        execute.push('systemctl disable ' + hostData.id);
-        execute.push('systemctl stop ' + hostData.id);
+        
+        var execute = [
+            'rm $src',
+            '/etc/init.d/nginx reload',
+            'systemctl disable ' + hostData.id,
+            'systemctl stop ' + hostData.id
+        ];
 
         cb(exec(execute));
     }
@@ -234,7 +230,6 @@ class Nodehost implements Async
 
         try sys.FileSystem.deleteFile(Path.join(['/etc/systemd/system', hostData.id + ".service"])) catch(e : Dynamic) {};
         try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
-        try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".ssl.conf"])) catch(e : Dynamic) {};
 
         if(includingDir)
             exec(['rm -rf ' + hostData.path]);
