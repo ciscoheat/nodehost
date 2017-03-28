@@ -215,12 +215,12 @@ class Nodehost implements Async
         sudoExec(['chown $user:${config.app} ${hostData.path} -R']);
 
         // Enable service
-        enable(hostname, cb);
+        start(hostname, cb);
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
-    public function enable(hostname : String, cb : Error -> Void) {
+    public function start(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
         if(hostData.enabled)
@@ -240,7 +240,7 @@ class Nodehost implements Async
 
     ///////////////////////////////////////////////////////////////////////////
 
-    public function disable(hostname : String, cb : Error -> Void) {
+    public function stop(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
         if(!hostData.enabled)
@@ -264,7 +264,7 @@ class Nodehost implements Async
         var err, hostData = @async(err => cb) getHost(hostname);
 
         if(!hostData.enabled)
-            return enable(hostname, cb);
+            return start(hostname, cb);
 
         var execute = [
             '/etc/init.d/nginx reload',
@@ -294,7 +294,7 @@ class Nodehost implements Async
             return cb(new Error("User interrupt."));
         }
         
-        var err = @async disable(hostname);
+        var err = @async stop(hostname);
         var err, hostData = @async(err => cb) getHost(hostname);
 
         var execute = [

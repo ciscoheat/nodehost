@@ -20,10 +20,10 @@ Commands:
   list
 
   status <hostname>
-  edit-nginx <hostname> [--restart]
-  enable <hostname>
-  disable <hostname>
+  start <hostname>
+  stop <hostname>
   restart <hostname>
+  edit-nginx <hostname> [--restart]
   remove <hostname> [--including-dir]  
 
         ".trim() + "\n");
@@ -99,11 +99,11 @@ Commands:
                 var includingDir = params.length > 1 && params[1] == '--including-dir';
                 Nodehost.fromConfig(appName).remove(params[0], includingDir, exit);
 
-            case 'enable' if(params.length == 1):
-                Nodehost.fromConfig(appName).enable(params[0], exit);
+            case 'start' if(params.length == 1):
+                Nodehost.fromConfig(appName).start(params[0], exit);
 
-            case 'disable' if(params.length == 1):
-                Nodehost.fromConfig(appName).disable(params[0], exit);
+            case 'stop' if(params.length == 1):
+                Nodehost.fromConfig(appName).stop(params[0], exit);
 
             case 'restart' if(params.length == 1):
                 Nodehost.fromConfig(appName).restart(params[0], exit);
