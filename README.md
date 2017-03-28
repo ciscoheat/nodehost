@@ -11,21 +11,31 @@ Quick Node.js hosting on ubuntu:
 
 ## Install
 
-As root, in the repo dir:
+As the user that should be the administrator of the hosting:
 
 ```bash
 # Install Node.js if needed
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - && sudo apt-get install -y nodejs
 
+# Install Haxe if needed
+sudo add-apt-repository ppa:haxe/releases -y
+sudo apt-get update
+sudo apt-get install haxe -y
+mkdir ~/haxelib && haxelib setup ~/haxelib
+
+# Clone the repo
+git clone https://github.com/ciscoheat/nodehost.git && cd nodehost
+
 # First time build
-npm install && npm run build
+npm install
+haxelib install nodehost.hxml
+npm run build && sudo npm link
+```
 
-# For shell usage
-npm link
+## Setting up
 
-# "username" is the default user the services should run under, for example "ubuntu".
-# That user will also have write rights to "/hosting/dir"
-nodehost setup /hosting/dir username --install-dependencies
+```bash
+nodehost setup /hosting/dir --install-dependencies
 ```
 
 ## Building
@@ -37,11 +47,8 @@ npm run build
 ## Running
 
 ```
-nodehost help
-nodehost list
-sudo nodehost create example.com
-sudo nodehost <restart/disable/enable/remove> example.com
-nodehost status example.com
+# nodehost help for help
+nodehost <command> [options...]
 ```
 
 ## Useful files and dirs

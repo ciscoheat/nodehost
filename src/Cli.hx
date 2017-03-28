@@ -9,16 +9,24 @@ class Cli implements Async
     static var appName(default, never) = 'nodehost';
     static var startPort(default, never) = 14400;
 
-    static function help() {
-        Sys.println("Nodehost available commands:");
-        Sys.println("  setup <directory> <username> [startport] [--install-dependencies]");
-        Sys.println("  list");
-        Sys.println("  create <hostname> [--no-https] [--no-http] [--separate-user]");
-        Sys.println("  enable <hostname>");
-        Sys.println("  disable <hostname>");
-        Sys.println("  restart <hostname>");
-        Sys.println("  status <hostname>");
-        Sys.println("  remove <hostname> [--including-dir]");
+    static function help() { Sys.println("
+Usage: nodehost <command> [options...]
+
+Commands:
+
+  setup <directory> <username> [startport] [--install-dependencies]
+  create <hostname> [--no-https] [--no-http] [--separate-user]
+
+  list
+
+  status <hostname>
+  edit-nginx <hostname> [--restart]
+  enable <hostname>
+  disable <hostname>
+  restart <hostname>
+  remove <hostname> [--including-dir]  
+
+        ".trim() + "\n");
         Sys.exit(1);
     }
 
@@ -35,14 +43,14 @@ class Cli implements Async
         var params = args.slice(1);
 
         switch args[0].trim() {
-            case 'setup' if(params.length >= 2):
+            case 'setup' if(params.length >= 1):
                 var installDeps = params.has('--install-dependencies');
                 params.remove("--install-dependencies");
 
-                if(params.length < 2) help();
+                if(params.length == 0) help();
 
                 var basepath = params[0];
-                var username = params[1];
+                var username = if(params.length > 1) params[1] else ChildProcess.execSync("whoami", {encoding: 'utf-8'}).trim();
                 var startport = if(params.length > 2) Std.parseInt(params[2]) else startPort;
 
                 var appData = new Nodehost.AppData({
@@ -85,6 +93,10 @@ class Cli implements Async
             case 'status' if(params.length >= 1):
                 Nodehost.fromConfig(appName).status(params[0], params.slice(1), exit);
 
+            case 'edit-nginx' if(params.length >= 1):
+                var restart = params.has("--restart");
+                Nodehost.fromConfig(appName).editNginx(params[0], restart, exit);
+            
             case _:
                 help();
         }

@@ -5,13 +5,14 @@
   "author": "ciscoheat",
   "license": "MIT",
   "scripts": {
-    "build": "haxe nodehost.hxml && sed -i \"1i #!/usr/bin/env node\" bin/nodehost.js"
+    "build": "haxe nodehost.hxml && sed -i \"1i #!/usr/bin/env node\" bin/nodehost.js && chmod +x bin/nodehost.js"
   },
   "bin": {
     "nodehost": "./bin/nodehost.js"
   },
   "dependencies": {
     "glob": "^7.1.1",
-    "readline-sync": "^1.4.7"
+    "readline-sync": "^1.4.7",
+    "tmp": "0.0.31"
   }
 }

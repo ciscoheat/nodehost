@@ -45,7 +45,7 @@ class Nodehost implements Async
         // nodemon
         var err, stdout, stderr : String = @async ChildProcess.exec("nodemon -v", {encoding: 'utf-8'});
         if(err != null) {
-            var command = "npm install -g nodemon";
+            var command = "sudo npm install -g nodemon";
             var error = "nodemon not found. Can be installed with:\n" + command;
 
             var err = if(forceInstall) exec([command]) else new Error(error);
@@ -53,9 +53,9 @@ class Nodehost implements Async
         }
 
         // Nginx
-        var err, stdout, stderr : String = @async ChildProcess.exec("nginx -v", {encoding: 'utf-8'});
+        var err, stdout, stderr : String = @async ChildProcess.exec("/etc/init.d/nginx status", {encoding: 'utf-8'});
         if(err != null) {
-            var command = "sudo add-apt-repository ppa:nginx/stable && sudo apt-get update && sudo apt-get install -y nginx";
+            var command = "sudo add-apt-repository -y ppa:nginx/stable && sudo apt-get update -y && sudo apt-get install -y nginx";
             var error = "Nginx not found. Can be installed with:\n" + command;
 
             var err = if(forceInstall) exec([command]) else new Error(error);
@@ -65,7 +65,7 @@ class Nodehost implements Async
         // certbot
         var err, stdout, stderr : String = @async ChildProcess.exec("certbot --version", {encoding: 'utf-8'});
         if(err != null) {
-            var command = "sudo add-apt-repository -y ppa:certbot/certbot && sudo apt-get update && sudo apt-get install -y certbot";
+            var command = "sudo add-apt-repository -y ppa:certbot/certbot && sudo apt-get update -y && sudo apt-get install -y certbot";
             var error = "certbot/letsencrypt not found. Can be installed with:\n" + command;
 
             var err = if(forceInstall) exec([command]) else new Error(error);
@@ -89,22 +89,18 @@ class Nodehost implements Async
         }
 
         // Setup
-        var err = exec([
-            'getent group ${config.app} || addgroup ${config.app}',
+        var err = sudoExec([
+            'getent group ${config.app} || sudo addgroup ${config.app}',
             'gpasswd -a ${config.username} ${config.app}',
             'mkdir -p ${config.basepath}',
             'chown ${config.username}:${config.app} ${config.basepath}'
         ]);
         if(err != null) return cb(err);
 
-        try {
-            var json = haxe.Json.stringify(config.toJson(), "    ");
-            File.saveContent(configFile(config.app), json);
-        } catch(e : Dynamic) {
-            return cb(new Error(Std.string(e)));
-        }
+        var json = haxe.Json.stringify(config.toJson(), "    ") + "\n";
+        var err = installFile(configFile(config.app), json, 'root', 644);
 
-        cb(null);
+        cb(err);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -186,33 +182,37 @@ class Nodehost implements Async
         var startup = ~/\r/g.replace(render(template('startup.sh'), hostData), ''); // Remove carriage returns from shell script
         var app = render(template('app.js'), hostData);
 
-        File.saveContent(Path.join(['/etc/systemd/system', hostData.id + ".service"]), systemd);
+        installFile(
+            Path.join(['/etc/systemd/system', hostData.id + ".service"]),
+            systemd, 'root', 755
+        );
 
         var header = '# ${hostData.host} on port ${hostData.port}\n';
-        File.saveContent(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]), header + [http, https].join('\n'));
+        installFile(
+            Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]),
+            header + [http, https].join('\n'), 'root', 644
+        );
 
         // Create home directory
-        exec(['mkdir -p ' + Path.join([hostData.path, 'www', 'public'])]);
+        sudoExec(['mkdir -p ' + Path.join([hostData.path, 'www', 'public'])]);
 
         // Create extra user
-        if(separateUser) exec(['adduser --no-create-home --system ${hostData.id}']);
+        if(separateUser) sudoExec(['adduser --no-create-home --system ${hostData.id}']);
 
         // Add default app.js
         var appFile = Path.join([hostData.path, 'www', 'app.js']);
         if(!exists(appFile)) {
-            File.saveContent(appFile, app);
-            exec(['chmod 770 $appFile']);
+            installFile(appFile, app, 660);
         }
 
         // Add service start file
         var serviceFile = Path.join([hostData.path, hostData.host]);
         if(!exists(serviceFile)) {
-            File.saveContent(serviceFile, startup);
-            exec(['chmod 770 $serviceFile']);
+            installFile(serviceFile, startup, 770);
         }
 
         // Set owner to service user
-        exec(['chown $user:${config.app} ${hostData.path} -R']);
+        sudoExec(['chown $user:${config.app} ${hostData.path} -R']);
 
         // Enable service
         enable(hostname, cb);
@@ -235,7 +235,7 @@ class Nodehost implements Async
             'systemctl start ' + hostData.id
         ];
 
-        cb(exec(execute));
+        cb(sudoExec(execute));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -255,7 +255,7 @@ class Nodehost implements Async
             'systemctl stop ' + hostData.id
         ];
 
-        cb(exec(execute));
+        cb(sudoExec(execute));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -271,7 +271,7 @@ class Nodehost implements Async
             'systemctl restart ' + hostData.id
         ];
 
-        cb(exec(execute));
+        cb(sudoExec(execute));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -297,14 +297,26 @@ class Nodehost implements Async
         var err = @async disable(hostname);
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        exec(['getent passwd ${hostData.id} > /dev/null && deluser ${hostData.id}']);
+        var execute = [
+            'getent passwd ${hostData.id} > /dev/null && deluser ${hostData.id}',
+            'rm -f ' + Path.join(['/etc/systemd/system', hostData.id + ".service"]),
+            'rm -f ' + Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])
+        ];
 
-        try sys.FileSystem.deleteFile(Path.join(['/etc/systemd/system', hostData.id + ".service"])) catch(e : Dynamic) {};
-        try sys.FileSystem.deleteFile(Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])) catch(e : Dynamic) {};
+        if(includingDir) execute.push('rm -rf ' + hostData.path);
 
-        if(includingDir) exec(['rm -rf ' + hostData.path]);
+        cb(sudoExec(execute));
+    }
 
-        cb(null);
+    ///////////////////////////////////////////////////////////////////////////
+
+    public function editNginx(hostname : String, restartAfter : Bool, cb : Error -> Void) {
+        var err, hostData = @async(err => cb) getHost(hostname);
+        var file = Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]);
+
+        var err = sudoExec(['sudo bash -c "$${EDITOR:-nano} $file"']);
+        if(restartAfter && err == null) restart(hostname, cb);
+        else cb(err);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -353,6 +365,24 @@ class Nodehost implements Async
         return errors.length > 0
             ? new Error(errors.map(function(err) return err.message).join("\n"))
             : null;
+    }
+
+    static function sudoExec(commands : Array<String>)
+        return exec(commands.map(function(cmd) return 'sudo $cmd'));
+
+    static function installFile(filename : String, content : String, ?owner : String, ?permissions : Int) {
+        try {
+            var tmpFile = js.Lib.require('tmp').fileSync();
+            File.saveContent(tmpFile.name, content);
+
+            var params = ['install'];
+            if(owner != null) params.push('-g $owner -o $owner');
+            if(permissions != null) params.push('-m ' + Std.string(permissions));
+            params.push(tmpFile.name + " " + filename);
+
+            return sudoExec([params.join(" ")]);            
+        }
+        catch(e : Error) return e;
     }
 }
 
