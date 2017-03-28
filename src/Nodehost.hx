@@ -120,7 +120,7 @@ class Nodehost implements Async
                 if(!portReg.match(id)) {
                     throw new Error("Invalid configuration file: " + id + "." + filename.ext);
                 }
-                var port = Std.parseInt(portReg.matched(0));                
+                var port = Std.parseInt(portReg.matched(0));
 
                 var hostReg = ~/\bserver_name\s+((?:[a-z\d]([a-z\d-]{0,62}[a-z\d])*[\.]){1,3}[a-z]{1,61})/i;
                 if(!hostReg.match(content)) {
@@ -315,7 +315,10 @@ class Nodehost implements Async
         var err, hostData = @async(err => cb) getHost(hostname);
         var file = Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"]);
 
+        println('Editing ' + file);
+
         var err = sudoExec(['sudo bash -c "$${EDITOR:-nano} $file"']);
+        
         if(restartAfter && err == null) restart(hostname, cb);
         else cb(err);
     }

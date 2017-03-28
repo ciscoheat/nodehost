@@ -3,6 +3,7 @@ import Nodehost.Protocols;
 
 using StringTools;
 using Lambda;
+using Colors;
 
 class Cli implements Async
 {
@@ -67,22 +68,33 @@ Commands:
                 var output = [['Host name', "Port", "Status", "Path"]];
 
                 for(h in hosts) {
-                    output.push([h.host, Std.string(h.port), (h.enabled ? "started" : "stopped"), h.path]);
+                    output.push([h.host, Std.string(h.port), (h.enabled ? "running" : "stopped"), h.path]);
                 }
 
                 var max = [];
                 for(x in 0...output[0].length) {
                     max[x] = 0;
                     for(y in 0...output.length) {
-                        max[x] = Std.int(Math.max(max[x], output[y][x].length));
+                        var str = output[y][x];
+                        max[x] = Std.int(Math.max(max[x], str.length));
                     }
                 }
 
+                var sep = " | ".dim();
+
                 Sys.println("");
                 for(y in 0...output.length) {
-                    Sys.println(' | ' + output[y].mapi(function(x, str) {
-                        return str.rpad(" ", max[x]);
-                    }).join(" | ") + ' | ');
+                    Sys.println(sep + output[y].mapi(function(x, str) {
+                        str = str.rpad(" ", max[x]);
+                        // Add some colors
+                        return if(y > 0) switch x {
+                            case 0: str.bold();
+                            case 2: str == "running" ? str.green() : str.red();
+                            case _: str;
+                        } else {
+                            str.yellow();
+                        }
+                    }).join(sep) + sep);
                 }
                 Sys.println("");
 
