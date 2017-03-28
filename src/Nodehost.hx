@@ -120,9 +120,9 @@ class Nodehost implements Async
                 if(!portReg.match(id)) {
                     throw new Error("Invalid configuration file: " + id + "." + filename.ext);
                 }
-                var port = Std.parseInt(portReg.matched(0));
+                var port = Std.parseInt(portReg.matched(0));                
 
-                var hostReg = ~/\bserver_name\s+([\S]+)/;
+                var hostReg = ~/\bserver_name\s+((?:[a-z\d]([a-z\d-]{0,62}[a-z\d])*[\.]){1,3}[a-z]{1,61})/i;
                 if(!hostReg.match(content)) {
                     throw new Error("server_name not found in configuration file: " + id + "." + filename.ext);
                 }
@@ -166,9 +166,10 @@ class Nodehost implements Async
 
         var user = separateUser ? id : config.username;
 
-        Reflect.setField(hostData, 'USER', user);
-
         // Render templates
+        Reflect.setField(hostData, 'USER', user);
+        Reflect.setField(hostData, 'HOSTS', ~/\..*\./.match(hostData.host) ? '${hostData.host}' : '${hostData.host} www.${hostData.host}');
+
         function template(name : String)
             return Path.join([js.Node.__dirname, 'templates', name]);
 
@@ -398,7 +399,7 @@ class Nodehost implements Async
 {
     @validate(~/[a-zA-Z]\w*\d+/) public var id : String;
     @validate(_.length > 1) public var path : String;
-    @validate(~/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/) public var host : String;
+    @validate(~/^((?:[a-z\d]([a-z\d-]{0,62}[a-z\d])*[\.]){1,3}[a-z]{1,61})$/i) public var host : String;
     @validate(_ >= 1024) public var port : Int;
     public var enabled : Bool;
 }
