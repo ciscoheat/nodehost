@@ -64,9 +64,27 @@ Commands:
 
             case 'list' if(params.length == 0):
                 var err, hosts = @async(err => exit) Nodehost.fromConfig(appName).list();
+                var output = [['Host name', "Port", "Status", "Path"]];
+
                 for(h in hosts) {
-                    Sys.println(h.host + " " + h.port + " " + h.path + " " + (h.enabled ? "[Enabled]" : ""));
+                    output.push([h.host, Std.string(h.port), (h.enabled ? "enabled" : "stopped"), h.path]);
                 }
+
+                var max = [];
+                for(x in 0...output[0].length) {
+                    max[x] = 0;
+                    for(y in 0...output.length) {
+                        max[x] = Std.int(Math.max(max[x], output[y][x].length));
+                    }
+                }
+
+                Sys.println("");
+                for(y in 0...output.length) {
+                    Sys.println(' | ' + output[y].mapi(function(x, str) {
+                        return str.rpad(" ", max[x]);
+                    }).join(" | ") + ' | ');
+                }
+                Sys.println("");
 
             case 'create' if(params.length >= 1):
                 var args = params.slice(1);
