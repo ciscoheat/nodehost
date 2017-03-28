@@ -338,8 +338,7 @@ class Nodehost implements Async
     static function ask(msg : String) : Bool {
         var response = '';
         while(!['y', 'n'].has(response)) {
-            print(msg.rtrim() + ' (y/n) ');
-            response = Sys.stdin().readLine().toLowerCase();
+            response = js.Lib.require('readline-sync').question(msg.rtrim() + ' (y/n) ').toLowerCase();
         }
         return response == 'y';
     }
