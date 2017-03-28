@@ -65,7 +65,7 @@ class Nodehost implements Async
         // certbot
         var err, stdout, stderr : String = @async ChildProcess.exec("certbot --version", {encoding: 'utf-8'});
         if(err != null) {
-            var command = "sudo add-apt-repository -y ppa:certbot/certbot && sudo apt-get update && sudo apt-get-install -y certbot";
+            var command = "sudo add-apt-repository -y ppa:certbot/certbot && sudo apt-get update && sudo apt-get install -y certbot";
             var error = "certbot/letsencrypt not found. Can be installed with:\n" + command;
 
             var err = if(forceInstall) exec([command]) else new Error(error);
