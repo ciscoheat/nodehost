@@ -1,7 +1,5 @@
 import js.node.ChildProcess;
 import Sys.println;
-import Sys.print;
-import Sys.exit;
 import js.Error;
 import sys.FileSystem.exists;
 import haxe.io.Path;
@@ -34,7 +32,7 @@ class Nodehost implements Async
 
     public function new(config : AppData) {
         if(config.username == "root") throw "Nodehost cannot be used as root.";
-        if(exec(['id -u ${config.username} > /dev/null']) != null) throw 'User ${config.username} doesn\'t exist.';
+        if(exec(['id -u ${config.username}'], false) != null) throw 'User ${config.username} doesn\'t exist.';
 
         this.config = config;
     }
@@ -128,8 +126,7 @@ class Nodehost implements Async
                     id: id,
                     path: Path.join([config.basepath, host]),
                     host: host,
-                    port: port,
-                    enabled: exec(['systemctl status $id'], false) == null
+                    port: port
                 });
             });
             cb(null, hosts);
@@ -156,8 +153,7 @@ class Nodehost implements Async
             id: id,
             path: Path.join([config.basepath, hostname]),
             host: hostname,
-            port: nextPort,
-            enabled: false,
+            port: nextPort
         });
 
         var user = separateUser ? id : config.username;
@@ -220,7 +216,7 @@ class Nodehost implements Async
     public function start(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        if(hostData.enabled)
+        if(hostData.enabled())
             return cb(new Error('$hostname is already enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-available', hostData.id + '.conf']);
@@ -241,7 +237,7 @@ class Nodehost implements Async
     public function stop(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        if(!hostData.enabled)
+        if(!hostData.enabled())
             return cb(new Error('$hostname is not enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.conf']);
@@ -261,7 +257,7 @@ class Nodehost implements Async
     public function restart(hostname : String, cb : Error -> Void) {
         var err, hostData = @async(err => cb) getHost(hostname);
 
-        if(!hostData.enabled)
+        if(!hostData.enabled())
             return start(hostname, cb);
 
         var execute = [
@@ -296,7 +292,7 @@ class Nodehost implements Async
         var err, hostData = @async(err => cb) getHost(hostname);
 
         var execute = [
-            'getent passwd ${hostData.id} > /dev/null && deluser ${hostData.id}',
+            'getent passwd ${hostData.id} > /dev/null && sudo deluser ${hostData.id}',
             'rm -f ' + Path.join(['/etc/systemd/system', hostData.id + ".service"]),
             'rm -f ' + Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])
         ];
@@ -356,7 +352,7 @@ class Nodehost implements Async
         return response == 'y';
     }
 
-    static function exec(commands : Array<String>, displayOutput = true) : Error {
+    public static function exec(commands : Array<String>, displayOutput = true) : Error {
         var errors = [];
         for(cmd in commands) {
             try ChildProcess.execSync(cmd, {stdio: displayOutput ? 'inherit' : 'ignore'})
@@ -401,5 +397,7 @@ class Nodehost implements Async
     @validate(_.length > 1) public var path : String;
     @validate(~/^((?:[a-z\d]([a-z\d-]{0,62}[a-z\d])*[\.]){1,3}[a-z]{1,61})$/i) public var host : String;
     @validate(_ >= 1024) public var port : Int;
-    public var enabled : Bool;
+    
+    public function enabled()
+        return Nodehost.exec(['systemctl status $id'], false) == null;
 }
