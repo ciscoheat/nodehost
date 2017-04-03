@@ -2,6 +2,7 @@
   "name": "nodehost",
   "version": "0.1.0",
   "description": "Simple node.js hosting on AWS/EC2.",
+  "repository": "https://github.com/ciscoheat/nodehost",
   "author": "ciscoheat",
   "license": "MIT",
   "scripts": {

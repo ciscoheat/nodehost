@@ -107,10 +107,6 @@ class Nodehost implements Async
 
     public function list(cb : Error -> Array<HostData> -> Void) {
         try {
-            var enabled = Glob.sync('/etc/nginx/sites-enabled/${config.app}+([0-9]).conf').map(function(file)
-                return new Path(file).file
-            );
-
             var hosts = Glob.sync('/etc/nginx/sites-available/${config.app}+([0-9]).conf').map(function(file) {
                 var filename = new Path(file);
                 var content = File.getContent(file);
@@ -133,7 +129,7 @@ class Nodehost implements Async
                     path: Path.join([config.basepath, host]),
                     host: host,
                     port: port,
-                    enabled: enabled.has(id),
+                    enabled: exec(['systemctl status $id'], false) == null
                 });
             });
             cb(null, hosts);
@@ -228,9 +224,10 @@ class Nodehost implements Async
             return cb(new Error('$hostname is already enabled.'));
 
         var src = Path.join(['/etc/nginx/sites-available', hostData.id + '.conf']);
+        var target = src.replace('/sites-available/', '/sites-enabled/');
 
         var execute = [
-            'ln -s $src ' + src.replace('/sites-available/', '/sites-enabled/'),
+            'test ! -f $target && sudo ln -s $src $target',
             '/etc/init.d/nginx reload',
             'systemctl enable ' + hostData.id,
             'systemctl start ' + hostData.id
@@ -359,10 +356,10 @@ class Nodehost implements Async
         return response == 'y';
     }
 
-    static function exec(commands : Array<String>) : Error {
+    static function exec(commands : Array<String>, displayOutput = true) : Error {
         var errors = [];
         for(cmd in commands) {
-            try ChildProcess.execSync(cmd, {stdio: 'inherit'})
+            try ChildProcess.execSync(cmd, {stdio: displayOutput ? 'inherit' : 'ignore'})
             catch(e : js.Error) errors.push(e);
         }
 
