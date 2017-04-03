@@ -68,7 +68,7 @@ Commands:
                 var output = [['Host name', "Port", "Status", "Path"]];
 
                 for(h in hosts) {
-                    output.push([h.host, Std.string(h.port), (h.enabled ? "running" : "stopped"), h.path]);
+                    output.push([h.host, Std.string(h.port), (h.enabled() ? "running" : "stopped"), h.path]);
                 }
 
                 var max = [];
