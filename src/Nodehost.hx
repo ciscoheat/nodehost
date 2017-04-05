@@ -43,7 +43,7 @@ class Nodehost implements Async
         // nodemon
         var err, stdout, stderr : String = @async ChildProcess.exec("nodemon -v", {encoding: 'utf-8'});
         if(err != null) {
-            var command = "sudo npm install -g nodemon";
+            var command = "npm install -g nodemon";
             var error = "nodemon not found. Can be installed with:\n" + command;
 
             var err = if(forceInstall) exec([command]) else new Error(error);

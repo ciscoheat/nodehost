@@ -14,9 +14,11 @@ Quick Node.js hosting on ubuntu:
 As the user that should be the administrator of the hosting:
 
 ```bash
-sudo npm install -g node-host
+npm install -g node-host
 nodehost setup /hosting/dir --install-dependencies
 ```
+
+(If you cannot install globally with a non-root user, check out [how to fix the npm permissions](https://docs.npmjs.com/getting-started/fixing-npm-permissions).)
 
 ## Install for building/development
 
@@ -38,7 +40,7 @@ git clone https://github.com/ciscoheat/nodehost.git && cd nodehost
 # First time build
 npm install
 haxelib install nodehost.hxml
-npm run build && sudo npm link
+npm run build && npm link
 
 # Setup
 nodehost setup /hosting/dir --install-dependencies
