@@ -2,14 +2,23 @@
 
 Quick Node.js hosting on ubuntu:
 
-- Multiple Node apps, served with nginx (virtual host)
+- Multiple Node apps, served with nginx (as virtual hosts)
 - Service based (systemd)
 - Can be set to separate user per service
-- Restarts automatically using nodemon
+- Restarts automatically on file update using nodemon
 - SSL support with letsencrypt/certbot
 - *Alpha version*
 
-## Install
+## Install for using
+
+As the user that should be the administrator of the hosting:
+
+```bash
+sudo npm install -g node-host
+nodehost setup /hosting/dir --install-dependencies
+```
+
+## Install for building/development
 
 As the user that should be the administrator of the hosting:
 
@@ -30,15 +39,12 @@ git clone https://github.com/ciscoheat/nodehost.git && cd nodehost
 npm install
 haxelib install nodehost.hxml
 npm run build && sudo npm link
-```
 
-## Setting up
-
-```bash
+# Setup
 nodehost setup /hosting/dir --install-dependencies
 ```
 
-## Building
+### Building
 
 ```bash
 npm run build
@@ -47,7 +53,7 @@ npm run build
 ## Running
 
 ```
-# nodehost help for help
+nodehost help
 nodehost <command> [options...]
 ```
 
@@ -71,3 +77,11 @@ Other useful locations for nodehost itself:
 ## SSL/TLS/HTTPS
 
 `/etc/nginx/sites-available/nodehost*.conf` contains details for generating either a self-signed certificate, or a real one with `certbot`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
+
+## How to uninstall
+
+Until an uninstall command is in place:
+
+1. `nodehost remove <hostname>` for all hosts
+1. Delete `/etc/nginx/nodehost.conf.json`
+1. Delete `/hosting/dir`

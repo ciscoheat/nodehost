@@ -1,0 +1,6 @@
+/.vagrant
+/nodehost
+/*.log
+/node_modules
+Vagrantfile
+provision.sh

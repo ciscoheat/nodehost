@@ -1,7 +1,7 @@
 {
-  "name": "nodehost",
+  "name": "node-host",
   "version": "0.1.0",
-  "description": "Simple node.js hosting on AWS/EC2.",
+  "description": "Simple node.js hosting on debian/ubuntu with nginx.",
   "repository": "https://github.com/ciscoheat/nodehost",
   "author": "ciscoheat",
   "license": "MIT",

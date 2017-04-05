@@ -23,7 +23,7 @@ class Nodehost implements Async
 
     public static function fromConfig(app : String) {
         if(!exists(configFile(app)))
-            throw 'Configuration file ' + configFile(app) + " doesn't exist.";
+            throw "Configuration file " + configFile(app) + " doesn't exist. Please run 'nodehost setup'.";
 
         return new Nodehost(AppData.fromJson(haxe.Json.parse(File.getContent(configFile(app)))));
     }
