@@ -14,6 +14,9 @@ Quick Node.js hosting on ubuntu:
 As the user that should be the administrator of the hosting:
 
 ```bash
+# Install Node.js if needed
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - && sudo apt-get install -y nodejs
+
 npm install -g node-host
 nodehost setup /hosting/dir --install-dependencies
 ```
