@@ -9,7 +9,7 @@ Quick Node.js hosting on ubuntu:
 - SSL support with letsencrypt/certbot
 - *Alpha version*
 
-## Install for using
+# Install for using
 
 As the user that should be the administrator of the hosting:
 
@@ -18,9 +18,49 @@ npm install -g node-host
 nodehost setup /hosting/dir --install-dependencies
 ```
 
-(If you cannot install globally with a non-root user, check out [how to fix the npm permissions](https://docs.npmjs.com/getting-started/fixing-npm-permissions).)
+Where `/hosting/dir` is where you want the hosts to reside on the server, for example `/var/www`.
 
-## Install for building/development
+(If you cannot use `install -g` with a non-root user, check out [how to fix the npm permissions](https://docs.npmjs.com/getting-started/fixing-npm-permissions).)
+
+## Running
+
+```bash
+nodehost help
+nodehost <command> [options...]
+```
+
+Use `nodehost create <yourdomain.com>` to create hosts, point the domain to the server, and you have a Node application up and running in less than a minute!
+
+## Useful files and dirs
+
+After creating a host, `example.com` will have some points of interest:
+
+- Base dir: `/hosting/dir/example.com`
+- Service execution file: `/hosting/dir/example.com/example.com`
+- www dir: `/hosting/dir/example.com/www`
+- static files dir: `/hosting/dir/example.com/www/public`
+
+Default behavior for the service execution file is to start nodemon for an `app.js` file in the `www` dir. Change the content as suited, but don't change the filename, since systemd depends on it.
+
+Other useful locations for nodehost itself:
+
+- `/etc/nginx/nodehost.conf.json` - configuration file, created during setup
+- `/etc/nginx/sites-available/nodehost*.conf` - nginx files for each host
+- `/etc/systemd/system/nodehost*.service` - systemd files for each host
+
+## SSL/TLS/HTTPS
+
+`nodehost edit-nginx <yourdomain.com>` to see details for generating either a self-signed certificate, or a real one with `certbot`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
+
+## How to uninstall
+
+Until an uninstall command is in place:
+
+1. `nodehost remove <hostname>` for all hosts
+1. Delete `/etc/nginx/nodehost.conf.json`
+1. Delete `/hosting/dir`
+
+# Install for building/development
 
 As the user that should be the administrator of the hosting:
 
@@ -46,44 +86,10 @@ npm run build && npm link
 nodehost setup /hosting/dir --install-dependencies
 ```
 
+Or if you have [vagrant](https://vagrantup.com) installed, do all of the above automatically with `vagrant up`. :)
+
 ### Building
 
 ```bash
 npm run build
 ```
-
-## Running
-
-```
-nodehost help
-nodehost <command> [options...]
-```
-
-## Useful files and dirs
-
-After creating a host, `example.com` will have some points of interest:
-
-- Base dir: `/hosting/dir/example.com`
-- Service execution file: `/hosting/dir/example.com/example.com`
-- www dir: `/hosting/dir/example.com/www`
-- static files dir: `/hosting/dir/example.com/www/public`
-
-Default behavior for the service execution file is to start nodemon for an `app.js` file in the `www` dir. Change the content as suited, but don't change the filename, since systemd depends on it.
-
-Other useful locations for nodehost itself:
-
-- `/etc/nginx/nodehost.conf.json` - configuration file, created during setup
-- `/etc/nginx/sites-available/nodehost*.conf` - nginx files for each host
-- `/etc/systemd/system/nodehost*.service` - systemd files for each host
-
-## SSL/TLS/HTTPS
-
-`/etc/nginx/sites-available/nodehost*.conf` contains details for generating either a self-signed certificate, or a real one with `certbot`. Note that only nginx is using the cert, the proxied connection between nginx and the Node app is http only (because they're on the same server).
-
-## How to uninstall
-
-Until an uninstall command is in place:
-
-1. `nodehost remove <hostname>` for all hosts
-1. Delete `/etc/nginx/nodehost.conf.json`
-1. Delete `/hosting/dir`
