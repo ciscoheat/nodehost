@@ -4,4 +4,4 @@
 # Working directory is www.
 # The & at the end is required to allow editing of this file, when the service is running:
 
-nodemon --quiet --ignore public/ app.js & 
+`npm bin -g`/nodemon --quiet --ignore public/ app.js & 

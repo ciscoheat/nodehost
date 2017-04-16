@@ -158,12 +158,12 @@ class Nodehost implements Async
 
         var user = separateUser ? id : config.username;
 
+        function template(name : String)
+            return Path.join([js.Node.__dirname, 'templates', name]);
+
         // Render templates
         Reflect.setField(hostData, 'USER', user);
         Reflect.setField(hostData, 'HOSTS', ~/\..*\./.match(hostData.host) ? '${hostData.host}' : '${hostData.host} www.${hostData.host}');
-
-        function template(name : String)
-            return Path.join([js.Node.__dirname, 'templates', name]);
 
         // Add special LOCATION var, for nginx configuration
         var location = render(template('nginx.location.conf'), hostData);
@@ -223,7 +223,7 @@ class Nodehost implements Async
         var target = src.replace('/sites-available/', '/sites-enabled/');
 
         var execute = [
-            'test ! -f $target && sudo ln -s $src $target',
+            'test ! -f $target && sudo ln -s $src $target > /dev/null',
             '/etc/init.d/nginx reload',
             'systemctl enable ' + hostData.id,
             'systemctl start ' + hostData.id
@@ -243,7 +243,7 @@ class Nodehost implements Async
         var src = Path.join(['/etc/nginx/sites-enabled', hostData.id + '.conf']);
 
         var execute = [
-            'rm $src',
+            'rm -f $src > /dev/null',
             '/etc/init.d/nginx reload',
             'systemctl disable ' + hostData.id,
             'systemctl stop ' + hostData.id
@@ -292,7 +292,7 @@ class Nodehost implements Async
         var err, hostData = @async(err => cb) getHost(hostname);
 
         var execute = [
-            'getent passwd ${hostData.id} > /dev/null && sudo deluser ${hostData.id}',
+            'getent passwd ${hostData.id} > /dev/null && sudo deluser ${hostData.id} > /dev/null',
             'rm -f ' + Path.join(['/etc/systemd/system', hostData.id + ".service"]),
             'rm -f ' + Path.join(['/etc/nginx/sites-available', hostData.id + ".conf"])
         ];
